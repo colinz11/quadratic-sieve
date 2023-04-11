@@ -1,4 +1,4 @@
-from math import pow, sqrt
+from math import pow, sqrt, exp, log
 
 
 #1. generate B-smooth factor base
@@ -9,9 +9,41 @@ from math import pow, sqrt
 
 # https://en.wikipedia.org/wiki/Quadratic_sieve 
 
-#euclidian gcd algorithim
-def gcd(n): 
-    pass
+#euclidian gcd algorithim FINISHED
+def gcd(a,b):
+
+    if b > a:
+        a, b = b, a
+
+    while b != 0:
+        a %= b
+        if a == 0:
+            return b
+        b %= a
+    return 1
+
+#generate all prime numbers up to n FINISHED
+def generate_primes(n):
+    if n < 2:
+        return []
+    
+    is_prime = [True] * (n+1)
+    i = 2
+
+    while i * i < n: 
+        if is_prime[i]:
+            for j in range(i * i, n + 1, i):
+                is_prime[j] = False
+        i += 1
+
+    return [p for p in range(2, n+1) if is_prime[p]]
+ 
+#picks optimal bound B FINISHED
+def get_smoothness_bound(N):
+    epsilon = 0.1
+    B = exp((0.5 + epsilon) * sqrt(log(N)*log(log(N))))
+    return int(B)
+    
 
 #newtons method for sqrt
 def isqrt(n): 
@@ -25,9 +57,18 @@ def legendre(a, p):
 
 #is n prime with some probability 
 def miller_rabin(n): 
-    return False
+    if n == 2 or n == 3:
+        return True
+    if n % 2 == 0:
+        return False
+    pass
 
 #tonelli algorithim 
 def tonelli(n, p): 
     pass
 
+def main():
+    print(get_smoothness_bound(1000000000000))
+
+if __name__ == "__main__":
+    main()
