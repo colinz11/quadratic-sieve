@@ -11,7 +11,6 @@ from math import pow, sqrt, exp, log
 
 #euclidian gcd algorithim FINISHED
 def gcd(a,b):
-
     if b > a:
         a, b = b, a
 
@@ -22,22 +21,35 @@ def gcd(a,b):
         b %= a
     return 1
 
-#generate all prime numbers up to n FINISHED
-def generate_primes(n):
-    if n < 2:
+
+#returns a^n mod p 
+def power(a, n, p):
+    ret = 1
+    while n > 0:
+        if n % 2 == 1:
+            ret = (ret * a) % p
+        a = (a * a) % p
+        n //= 2
+    return ret
+
+#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p FINISHED
+def find_factor_base(N, B):
+    if B < 2:
         return []
     
-    is_prime = [True] * (n+1)
-    i = 2
+    is_prime = [True] * (B+1)
+    p = 2
 
-    while i * i < n: 
-        if is_prime[i]:
-            for j in range(i * i, n + 1, i):
+    factor_base = []
+    while p * p < B: 
+        if is_prime[p]:
+            if legendre(N, p) == 1:
+                factor_base.append(p)
+            for j in range(p * p, B + 1, p):
                 is_prime[j] = False
-        i += 1
-
-    return [p for p in range(2, n+1) if is_prime[p]]
- 
+        p += 1
+    return factor_base
+   
 #picks optimal bound B FINISHED
 def get_smoothness_bound(N):
     epsilon = 0.1
@@ -53,7 +65,8 @@ def gauss_elimination(matrix):
     return matrix
 
 def legendre(a, p):
-    return 0 if a % p == 0 else pow(a, (p-1) // 2 , p) #what is pow
+    return power(a, (p - 1) // 2, p)
+ 
 
 #is n prime with some probability 
 def miller_rabin(n): 
@@ -68,7 +81,8 @@ def tonelli(n, p):
     pass
 
 def main():
-    print(get_smoothness_bound(1000000000000))
+    N = 124871214124141680743806720389
+    print(find_factor_base(N, get_smoothness_bound(N)))
 
 if __name__ == "__main__":
     main()
