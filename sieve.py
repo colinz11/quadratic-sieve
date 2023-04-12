@@ -102,7 +102,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
     return smooth_nums, x
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
-def build_matrix(factor_base, smooth_nums, factors):
+def build_matrix(factor_base, smooth_nums):
     matrix = []
 
     for n in smooth_nums:
