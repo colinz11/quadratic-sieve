@@ -48,7 +48,7 @@ def find_factor_base(N, B):
     factor_base = []
     while p < B + 1: 
         if is_prime[p]:
-            if legendre(N, p) == 1:
+            if legendre(N, p) == 1: #finds our factor base
                 factor_base.append(p)
             for j in range(2 * p, B + 1, p):
                 is_prime[j] = False
@@ -74,16 +74,16 @@ def find_smooth(factor_base, N, interval, tolerance=1):
         i = 0
         while sieve_list[i] % 2 != 0:
             i += 1
-        for j in range(i, len(sieve_static), 2): # found the 1st even term, now every other term will also be even
-            while sieve_list[j] % 2 == 0: #account for powers of 2
+        for j in range(i, len(sieve_static), 2): #every other term is now even
+            while sieve_list[j] % 2 == 0: #2 is a prime factor
                 sieve_list[j] //= 2
                 prime_factors[sieve_static[j]].append(2)
 
     for p in factor_base[1:]: #skip 2
         residues = tonelli_shanks(N, p) 
         for r in residues: # two solutions r and p-r
-            for i in range((r-root) % p, len(sieve_static), p): # Now every pth term will also be divisible
-                while sieve_list[i] % p == 0:
+            for i in range((r-root) % p, len(sieve_static), p): #every pth term
+                while sieve_list[i] % p == 0:#p is a prime factor
                     sieve_list[i] //= p #divide by prime in factor base
                     prime_factors[sieve_static[i]].append(p)
 
@@ -99,7 +99,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
             break
         if sieve_list[i] == 1: #found B smooth
             smooth_nums.append(sieve_static[i])
-            factors[sieve_static[i]] = prime_factors[sieve_static[i]]
+            factors[sieve_static[i]] = prime_factors[sieve_static[i]]#prime factors for b smooth number
             x.append(i+root) #x+n
             indices.append(i) #n
     return smooth_nums, factors, x
@@ -126,14 +126,14 @@ def gauss_elimination(matrix):
     matrix = transpose(matrix)
     marks = [False] * len(matrix[0])
     
-    for i in range(len(matrix)): #do for all rows
+    for i in range(len(matrix)): 
         row = matrix[i]
         for num in row: #search for pivot
             if num == 1:
-                j = row.index(num) # column index
+                j = row.index(num) #column index
                 marks[j] = True
                 
-                for k in chain(range(0, i), range(i + 1, len(matrix))): #search for other 1s in the same column
+                for k in chain(range(0, i), range(i + 1, len(matrix))): #search for other 1s
                     if matrix[k][j] == 1:
                         for i in range(len(matrix[k])):
                             matrix[k][i] = (matrix[k][i] + row[i]) % 2
@@ -143,7 +143,7 @@ def gauss_elimination(matrix):
     matrix = transpose(matrix)
     
     solution_rows = []
-    for i in range(len(marks)): #find free columns (which have now become rows)
+    for i in range(len(marks)): #find free columns
         if not marks[i]:
             free_row = [matrix[i], i]
             solution_rows.append(free_row)
@@ -239,7 +239,7 @@ def tonelli_shanks(n, p):
     return r, p-r
 
 def main():
-    N = 16921456439215439701
+    N = 4423 * 6079
     B = get_smoothness_bound(N)
 
     print('Bound: ' + str(B))
