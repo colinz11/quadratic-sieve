@@ -1,5 +1,5 @@
 from math import pow, sqrt, exp, log, ceil
-
+from itertools import chain
 
 #1. generate B-smooth factor base
 #2. Find B-smooth relations using sieving and Tonelli-Shanks
@@ -102,7 +102,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
             factors[sieve_static[i]] = prime_factors[sieve_static[i]]
             x.append(i+root) #x+n
             indices.append(i) #n
-    return smooth_nums, factors, x, indices
+    return smooth_nums, factors, x
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
 def build_matrix(factor_base, smooth_nums, factors):
@@ -116,23 +116,83 @@ def build_matrix(factor_base, smooth_nums, factors):
             if factor_base[i] in prime_factors:
                 exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 #get exponenet vector of prime factors mod 2
         matrix.append(exp_vector)
-    print(matrix)
     return matrix
 
 def transpose(matrix):
     return [[matrix[i][j] for i in range(len(matrix))] for j in range(len(matrix[0]))]
 
+#gives list of null spaces
 def gauss_elimination(matrix):
-    pass
+    matrix = transpose(matrix)
+    marks = [False] * len(matrix[0])
+    
+    for i in range(len(matrix)): #do for all rows
+        row = matrix[i]
+        for num in row: #search for pivot
+            if num == 1:
+                j = row.index(num) # column index
+                marks[j] = True
+                
+                for k in chain(range(0, i), range(i + 1, len(matrix))): #search for other 1s in the same column
+                    if matrix[k][j] == 1:
+                        for i in range(len(matrix[k])):
+                            matrix[k][i] = (matrix[k][i] + row[i]) % 2
+                break
+            
+  
+    matrix = transpose(matrix)
+    
+    solution_rows = []
+    for i in range(len(marks)): #find free columns (which have now become rows)
+        if not marks[i]:
+            free_row = [matrix[i], i]
+            solution_rows.append(free_row)
+    return solution_rows, marks, matrix
+
+#gets the correct indices from the null space
+def solve_row(matrix, marks, solution_rows, K):
+    
+    row = solution_rows[K][0]
+    indices = []
+
+    solution_vector = []
+
+    for i in range(len(row)):
+        if row[i] == 1:
+            indices.append(i)
+    
+    for r in range(len(matrix)):
+        for c in indices:
+            if matrix[r][c] == 1 and marks[r]:
+                solution_vector.append(r)
+    solution_vector.append(solution_rows[K][1])
+    return solution_vector
+
+#caulates a^2 = b^2 mod n and does gcd(a+b, n)
+def solve(N, solution_vector, smooth_nums, x):
+    nums = [smooth_nums[i] for i in solution_vector]
+    x_nums = [x[i] for i in solution_vector]
+
+
+    a = 1
+    b = 1
+
+    for n in nums:
+        a *= n
+
+    for n in x_nums:
+        b *= n
+    
+
+    a = sqrt(a)
+
+
+    return gcd(a+b, N)    
 
 
 #newtons method for sqrt
 def newton_sqrt(n): 
     return sqrt(n)
-
-
-
- 
 
 #is n prime with some probability 
 def miller_rabin(n): 
@@ -179,18 +239,45 @@ def tonelli_shanks(n, p):
     return r, p-r
 
 def main():
-    N = 227179
+    N = 16921456439215439701
     B = get_smoothness_bound(N)
+
+    print('Bound: ' + str(B))
     
-    print(B)
     factor_base = find_factor_base(N, B)
-    print(factor_base)
-    smooth_nums, factors, x, indices = find_smooth(factor_base, N, B**3)
+
+    
+    print('Finding smooth numbers ...')
+
+    smooth_nums, factors, x = find_smooth(factor_base, N, B**3)
+
+    
     if len(smooth_nums) < len(factor_base):
         print('No smooth numbers')
         return
-    build_matrix(factor_base, smooth_nums, factors)
+    
+    print('Found smooth numbers')
 
+    matrix = build_matrix(factor_base, smooth_nums, factors)
+
+
+    print('Running guass elimination ... ')
+    solution_rows, marks, matrix = gauss_elimination(matrix)
+
+
+    
+    for K in range(len(solution_rows)):
+        print('Finding factors ...')
+        solution_vector = solve_row(matrix, marks, solution_rows, K)
+        factor = solve(N, solution_vector, smooth_nums, x)
+        if factor == 1 or factor == N:
+            print(factor)
+            print("Trivial factor")
+            continue
+        else:
+            print(factor)
+            print(N/factor)
+            return
 
 if __name__ == "__main__":
     main()
