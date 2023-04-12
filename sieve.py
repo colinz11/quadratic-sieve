@@ -68,7 +68,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
  
     sieve_list = sieve_static.copy()
 
-    prime_factors = {x : [] for x in sieve_static}
+   
     
     if factor_base[0] == 2:
         i = 0
@@ -77,7 +77,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
         for j in range(i, len(sieve_static), 2): #every other term is now even
             while sieve_list[j] % 2 == 0: #2 is a prime factor
                 sieve_list[j] //= 2
-                prime_factors[sieve_static[j]].append(2)
+               
 
     for p in factor_base[1:]: #skip 2
         residues = tonelli_shanks(N, p) 
@@ -85,12 +85,10 @@ def find_smooth(factor_base, N, interval, tolerance=1):
             for i in range((r-root) % p, len(sieve_static), p): #every pth term
                 while sieve_list[i] % p == 0:#p is a prime factor
                     sieve_list[i] //= p #divide by prime in factor base
-                    prime_factors[sieve_static[i]].append(p)
+
 
     x = [] 
     smooth_nums = []
-    factors = {}
-    indices = [] 
 
     
 
@@ -99,10 +97,9 @@ def find_smooth(factor_base, N, interval, tolerance=1):
             break
         if sieve_list[i] == 1: #found B smooth
             smooth_nums.append(sieve_static[i])
-            factors[sieve_static[i]] = prime_factors[sieve_static[i]]#prime factors for b smooth number
+
             x.append(i+root) #x+n
-            indices.append(i) #n
-    return smooth_nums, factors, x
+    return smooth_nums, x
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
 def build_matrix(factor_base, smooth_nums, factors):
@@ -110,13 +107,23 @@ def build_matrix(factor_base, smooth_nums, factors):
 
     for n in smooth_nums:
         exp_vector = [0]*(len(factor_base))
-        prime_factors = factors[n]
+        prime_factors = factor(n, factor_base)
 
         for i in range(len(factor_base)):
             if factor_base[i] in prime_factors:
                 exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 #get exponenet vector of prime factors mod 2
         matrix.append(exp_vector)
     return matrix
+
+def factor(n, factor_base):#trial division from factor base
+    factors = []
+
+    for p in factor_base:
+        while n % p == 0:
+            factors.append(p)
+            n //= p
+    return factors
+
 
 def transpose(matrix):
     return [[matrix[i][j] for i in range(len(matrix))] for j in range(len(matrix[0]))]
