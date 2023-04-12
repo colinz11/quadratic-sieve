@@ -256,7 +256,7 @@ def main():
     
     print('Finding smooth numbers ...')
 
-    smooth_nums, factors, x = find_smooth(factor_base, N, B**3)
+    smooth_nums, x = find_smooth(factor_base, N, B**3)
 
     
     if len(smooth_nums) < len(factor_base):
@@ -265,7 +265,7 @@ def main():
     
     print('Found smooth numbers')
 
-    matrix = build_matrix(factor_base, smooth_nums, factors)
+    matrix = build_matrix(factor_base, smooth_nums)
 
 
     print('Running guass elimination ... ')
