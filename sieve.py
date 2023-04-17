@@ -67,33 +67,34 @@ def find_smooth(factor_base, N, interval, tolerance=1):
     root = ceil(sqrt(N))
     x = [] 
     smooth_nums = []
+    factors = {}
     for i in range(interval):
-
-        sieve_list = int(pow(root + i, 2) - N)
-        sieve_static = [sieve_list][0]
-
-        for p in factor_base: #skip 2
-            while sieve_list % p == 0:#p is a prime factor
-                sieve_list //= p #divide by prime in factor base
+        sieve_num = int(pow(root + i, 2) - N)
+        sieve_static = [sieve_num][0]
+        prime_factors = []
+        for p in factor_base: 
+            while sieve_num % p == 0:#p is a prime factor
+                sieve_num //= p #divide by prime in factor base
+                prime_factors.append(p)
 
         
-
-        if sieve_list == 1:
+        if sieve_num == 1:
             smooth_nums.append(sieve_static)
+            factors[sieve_static] = prime_factors
             x.append(i+root) #x+n
             print('Smooth Number: '+str(sieve_static))
         
         if len(smooth_nums) >= len(factor_base) + tolerance: 
               break
-    return smooth_nums, x
+    return smooth_nums, x, factors
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
-def build_matrix(factor_base, smooth_nums):
+def build_matrix(factor_base, smooth_nums, factors):
     matrix = []
 
     for n in smooth_nums:
         exp_vector = [0]*(len(factor_base))
-        prime_factors = factor(n, factor_base)
+        prime_factors = factors[n]
 
         for i in range(len(factor_base)):
             if factor_base[i] in prime_factors:
@@ -234,7 +235,7 @@ def tonelli_shanks(n, p):
     return r, p-r
 
 def main():
-    N = 97*1009
+    N = 21
     B = get_smoothness_bound(N)
 
     print('Bound: ' + str(B))
@@ -243,14 +244,14 @@ def main():
 
     
     print('Finding smooth numbers ...')
-    smooth_nums, x = find_smooth(factor_base, N, B**3)
+    smooth_nums, x, factors = find_smooth(factor_base, N, B**3)
 
     if len(smooth_nums) < len(factor_base):
         print('No smooth numbers')
         return
     
     print('Found smooth numbers')
-    matrix = build_matrix(factor_base, smooth_nums)
+    matrix = build_matrix(factor_base, smooth_nums, factors)
 
 
     print('Running guass elimination ... ')
