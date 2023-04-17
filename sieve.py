@@ -57,48 +57,34 @@ def find_factor_base(N, B):
    
 #picks optimal bound B FINISHED
 def get_smoothness_bound(N):
-    epsilon = 0.23
-    B = exp((0.5 + epsilon) * sqrt(log(N)*log(log(N))))
-    return int(B)
+    epsilon = 0
+    e = 2.71
+    B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
+    return ceil(B)
 
 #does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers. Then use Tonelli and Shanks to compute resiudes for each prime in factor base
 def find_smooth(factor_base, N, interval, tolerance=1):
     root = ceil(sqrt(N))
-    sieve_static = [int(pow(root + i, 2) - N) for i in range(interval)]
- 
-    sieve_list = sieve_static.copy()
-
-   
-    
-    if factor_base[0] == 2:
-        i = 0
-        while sieve_list[i] % 2 != 0:
-            i += 1
-        for j in range(i, len(sieve_static), 2): #every other term is now even
-            while sieve_list[j] % 2 == 0: #2 is a prime factor
-                sieve_list[j] //= 2
-               
-
-    for p in factor_base[1:]: #skip 2
-        residues = tonelli_shanks(N, p) 
-        for r in residues: # two solutions r and p-r
-            for i in range((r-root) % p, len(sieve_static), p): #every pth term
-                while sieve_list[i] % p == 0:#p is a prime factor
-                    sieve_list[i] //= p #divide by prime in factor base
-
-
     x = [] 
     smooth_nums = []
+    for i in range(interval):
 
-    
+        sieve_list = int(pow(root + i, 2) - N)
+        sieve_static = [sieve_list][0]
 
-    for i in range(len(sieve_static)):
-        if len(smooth_nums) >= len(factor_base) + tolerance: 
-            break
-        if sieve_list[i] == 1: #found B smooth
-            smooth_nums.append(sieve_static[i])
+        for p in factor_base: #skip 2
+            while sieve_list % p == 0:#p is a prime factor
+                sieve_list //= p #divide by prime in factor base
 
+        
+
+        if sieve_list == 1:
+            smooth_nums.append(sieve_static)
             x.append(i+root) #x+n
+            print('Smooth Number: '+str(sieve_static))
+        
+        if len(smooth_nums) >= len(factor_base) + tolerance: 
+              break
     return smooth_nums, x
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
@@ -180,26 +166,28 @@ def solve(N, solution_vector, smooth_nums, x):
     nums = [smooth_nums[i] for i in solution_vector]
     x_nums = [x[i] for i in solution_vector]
 
-
     a = 1
     b = 1
 
     for n in nums:
         a *= n
-
+        a = a % N
     for n in x_nums:
         b *= n
-    
-
+            
     a = sqrt(a)
-
 
     return gcd(a+b, N)    
 
 
 #newtons method for sqrt
 def newton_sqrt(n): 
-    return sqrt(n)
+    approx = n/2
+    closer = (approx + n/approx)/2
+    while closer != approx:
+        approx = closer
+        closer = (approx + n/approx)/2
+    return approx
 
 #is n prime with some probability 
 def miller_rabin(n): 
@@ -246,7 +234,7 @@ def tonelli_shanks(n, p):
     return r, p-r
 
 def main():
-    N = 4423 * 6079
+    N = 97*1009
     B = get_smoothness_bound(N)
 
     print('Bound: ' + str(B))
@@ -255,16 +243,13 @@ def main():
 
     
     print('Finding smooth numbers ...')
-
     smooth_nums, x = find_smooth(factor_base, N, B**3)
 
-    
     if len(smooth_nums) < len(factor_base):
         print('No smooth numbers')
         return
     
     print('Found smooth numbers')
-
     matrix = build_matrix(factor_base, smooth_nums)
 
 
