@@ -11,15 +11,12 @@ from itertools import chain
 
 #euclidian gcd algorithim FINISHED
 def gcd(a,b):
-    if b > a:
-        a, b = b, a
-
     while b != 0:
-        a %= b
-        if a == 0:
-            return b
-        b %= a
-    return 1
+        t = b
+        b = a % b
+        a = t
+
+    return a
 
 
 #returns a^n mod p FINISHED
@@ -57,9 +54,8 @@ def find_factor_base(N, B):
    
 #picks optimal bound B FINISHED
 def get_smoothness_bound(N):
-    epsilon = 0
-    e = 2.71
-    B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
+    epsilon = 0.5
+    B =  exp((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
     return ceil(B)
 
 #does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers. Then use Tonelli and Shanks to compute resiudes for each prime in factor base
@@ -73,7 +69,7 @@ def find_smooth(factor_base, N, interval, tolerance=1):
         sieve_static = [sieve_num][0]
         prime_factors = []
         for p in factor_base: 
-            while sieve_num % p == 0:#p is a prime factor
+            while sieve_num % p == 0: #p is a prime factor
                 sieve_num //= p #divide by prime in factor base
                 prime_factors.append(p)
 
@@ -82,9 +78,9 @@ def find_smooth(factor_base, N, interval, tolerance=1):
             smooth_nums.append(sieve_static)
             factors[sieve_static] = prime_factors
             x.append(i+root) #x+n
-            print('Smooth Number: '+str(sieve_static))
+            #print('Smooth Number: ' + str(sieve_static))
         
-        if len(smooth_nums) >= len(factor_base) + tolerance: 
+        if len(smooth_nums) >= len(factor_base) + tolerance: #stop when we find smooth numbers > # of primes
               break
     return smooth_nums, x, factors
 
@@ -94,23 +90,13 @@ def build_matrix(factor_base, smooth_nums, factors):
 
     for n in smooth_nums:
         exp_vector = [0]*(len(factor_base))
-        prime_factors = factors[n]
+        prime_factors = factors[n] #factors for smooth number
 
         for i in range(len(factor_base)):
             if factor_base[i] in prime_factors:
                 exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 #get exponenet vector of prime factors mod 2
         matrix.append(exp_vector)
     return matrix
-
-def factor(n, factor_base):#trial division from factor base
-    factors = []
-
-    for p in factor_base:
-        while n % p == 0:
-            factors.append(p)
-            n //= p
-    return factors
-
 
 def transpose(matrix):
     return [[matrix[i][j] for i in range(len(matrix))] for j in range(len(matrix[0]))]
@@ -145,7 +131,6 @@ def gauss_elimination(matrix):
 
 #gets the correct indices from the null space
 def solve_row(matrix, marks, solution_rows, K):
-    
     row = solution_rows[K][0]
     indices = []
 
@@ -171,24 +156,26 @@ def solve(N, solution_vector, smooth_nums, x):
     b = 1
 
     for n in nums:
-        a *= n
-        a = a % N
+        a *= n #calculating a^2
     for n in x_nums:
         b *= n
-            
-    a = sqrt(a)
 
-    return gcd(a+b, N)    
+  
+    a = newton_sqrt(a)
+   
+    return gcd(b+a, N)    
 
+def congruent(a, b, n):
+    return a % n == b % n
 
 #newtons method for sqrt
 def newton_sqrt(n): 
-    approx = n/2
-    closer = (approx + n/approx)/2
-    while closer != approx:
-        approx = closer
-        closer = (approx + n/approx)/2
-    return approx
+    x = n
+    y = (x + 1) // 2
+    while y < x:
+        x = y
+        y = (x + n // x) // 2
+    return x
 
 #is n prime with some probability 
 def miller_rabin(n): 
@@ -198,44 +185,9 @@ def miller_rabin(n):
         return False
     pass
 
-#tonelli algorithim copied from internet, two solutionrs r and p-r
-def tonelli_shanks(n, p): 
-    q = p - 1
-    s = 0
-
-    while q % 2 == 0:
-        q //= 2
-        s += 1
-
-    if s == 1:
-        r = power(n, (p + 1) // 4, p)
-        return r, p-r
-    
-    for z in range(2, p):
-        if p - 1 == legendre(z, p):
-            break
-
-    c = power(z, q, p)
-    r = power(n, (q + 1) // 2, p)
-    t = power(n, q, p)
-    m = s
-    t2 = 0
-
-    while (t - 1) % p != 0:
-        t2 = (t * t) % p
-        for i in range(1, m):
-            if (t2 - 1) % p == 0:
-                break
-            t2 = (t2 * t2) % p
-        b = power(c, 1 << (m - i - 1), p)
-        r = (r * b) % p
-        c = (b * b) % p
-        t = (t * c) % p
-        m = i
-    return r, p-r
-
 def main():
-    N = 21
+    N = 16921456439215439701
+    
     B = get_smoothness_bound(N)
 
     print('Bound: ' + str(B))
@@ -247,10 +199,12 @@ def main():
     smooth_nums, x, factors = find_smooth(factor_base, N, B**3)
 
     if len(smooth_nums) < len(factor_base):
-        print('No smooth numbers')
+        print('Not enough smooth numbers')
         return
     
-    print('Found smooth numbers')
+    print(f'Found {len(smooth_nums)} smooth numbers')
+
+    print('Building matrix ...')
     matrix = build_matrix(factor_base, smooth_nums, factors)
 
 
@@ -258,18 +212,14 @@ def main():
     solution_rows, marks, matrix = gauss_elimination(matrix)
 
 
-    
+    print('Finding factors ...')
     for K in range(len(solution_rows)):
-        print('Finding factors ...')
         solution_vector = solve_row(matrix, marks, solution_rows, K)
         factor = solve(N, solution_vector, smooth_nums, x)
         if factor == 1 or factor == N:
-            print(factor)
-            print("Trivial factor")
-            continue
+            print("Trivial factor: " + str(factor))
         else:
-            print(factor)
-            print(N/factor)
+            print(f"Found Factors: {factor}, {int(N/factor)}")
             return
 
 if __name__ == "__main__":
