@@ -8,9 +8,8 @@ import time
 #4. Solve matri for null space finding perfect squares
 #5. Solve the congruence of squares to obtain factors 
 
-# https://en.wikipedia.org/wiki/Quadratic_sieve 
 
-#euclidian gcd algorithim FINISHED
+#euclidian gcd algorithim
 def gcd(a,b):
     if b > a:
         a, b = b, a
@@ -31,7 +30,7 @@ def int_pow(a, n):
 
 
 
-#returns a^n mod p FINISHED
+#returns a^n mod p
 def power(a, n, p):
     ret = 1
     while n > 0:
@@ -42,13 +41,13 @@ def power(a, n, p):
     return ret
 
 
-#get legendre number, we want when result is 1 FINISHED
+#get legendre number, we want when result is 1
 def legendre(a, p):
     return power(a, (p - 1) // 2, p)
 
 
-#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p FINISHED
-def find_factor_base(N, B, epsilon = 0.0000001):
+#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p
+def find_factor_base(N, B):
     if B < 2:
         return []
     
@@ -65,7 +64,7 @@ def find_factor_base(N, B, epsilon = 0.0000001):
         p += 1
     return factor_base
    
-#picks optimal bound B FINISHED
+#picks optimal bound B
 def get_smoothness_bound(N):
     epsilon = 0.1
     e = 2.71
@@ -92,8 +91,8 @@ def find_smooth(factor_base, N, interval, tolerance=3):
             smooth_nums.append(sieve_static)
             factors[sieve_static] = prime_factors
             x.append(i+root) #x+n
-            if (len(smooth_nums) % 10 == 0):
-                print(str(time.ctime()) + 'Smooth Number ' + str(len(smooth_nums))  + ':'+ str(sieve_static))
+            #if (len(smooth_nums) % 10 == 0):
+            #   print(str(time.ctime()) + 'Smooth Number ' + str(len(smooth_nums))  + ':'+ str(sieve_static))
         if len(smooth_nums) >= (len(factor_base) * tolerance) + 1: 
               break
     return smooth_nums, x, factors
@@ -115,16 +114,6 @@ def build_matrix(factor_base, smooth_nums, factors):
         matrix.append(exp_vector)
         matrix2.append(exp_vector2)
     return matrix, matrix2
-
-def factor(n, factor_base):#trial division from factor base
-    factors = []
-
-    for p in factor_base:
-        while n % p == 0:
-            factors.append(p)
-            n //= p
-    return factors
-
 
 def transpose(matrix):
     return [[matrix[i][j] for i in range(len(matrix))] for j in range(len(matrix[0]))]
@@ -210,15 +199,6 @@ def solve(N, solution_vector, smooth_nums, x, factor_base, matrix2):
     return gcd(a+b, N)    
 
 
-#newtons method for sqrt
-def newton_sqrt(n): 
-    approx = n/2
-    closer = (approx + n/approx)/2
-    while closer != approx:
-        approx = closer
-        closer = (approx + n/approx)/2
-    return approx
-
 #is n prime with some probability 
 def miller_rabin(n): 
     if n == 2 or n == 3:
@@ -226,42 +206,6 @@ def miller_rabin(n):
     if n % 2 == 0:
         return False
     pass
-
-#tonelli algorithim copied from internet, two solutionrs r and p-r
-def tonelli_shanks(n, p): 
-    q = p - 1
-    s = 0
-
-    while q % 2 == 0:
-        q //= 2
-        s += 1
-
-    if s == 1:
-        r = power(n, (p + 1) // 4, p)
-        return r, p-r
-    
-    for z in range(2, p):
-        if p - 1 == legendre(z, p):
-            break
-
-    c = power(z, q, p)
-    r = power(n, (q + 1) // 2, p)
-    t = power(n, q, p)
-    m = s
-    t2 = 0
-
-    while (t - 1) % p != 0:
-        t2 = (t * t) % p
-        for i in range(1, m):
-            if (t2 - 1) % p == 0:
-                break
-            t2 = (t2 * t2) % p
-        b = power(c, 1 << (m - i - 1), p)
-        r = (r * b) % p
-        c = (b * b) % p
-        t = (t * c) % p
-        m = i
-    return r, p-r
 
 def main():
     #N = 1009 * 191161
@@ -272,8 +216,8 @@ def main():
     #N = 10000019 * 10000169
     #N = 100000007 * 10000169
     #N = 100000007 * 100000049
-    N = 16921456439215439701
-    #N = 46839566299936919234246726809
+    #N = 16921456439215439701
+    N = 46839566299936919234246726809
     #N = 6172835808641975203638304919691358469663
 
     B = get_smoothness_bound(N)
