@@ -71,7 +71,7 @@ def get_smoothness_bound(N):
     B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
     return ceil(B)
 
-#does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers. Then use Tonelli and Shanks to compute resiudes for each prime in factor base
+#does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers.
 def find_smooth(factor_base, N, interval, tolerance=3):
     root = ceil(sqrt(N))
     x = [] 
@@ -169,11 +169,6 @@ def solve_row(matrix, marks, solution_rows, K):
 def solve(N, solution_vector, smooth_nums, x, factor_base, matrix2):
     nums = [smooth_nums[i] for i in solution_vector]
     x_nums = [x[i] for i in solution_vector]
-
-    for i in range(len(x_nums)):
-        if ((x_nums[i] ** 2 % N) != nums[i] ):
-            print("wtf, " + str(x_nums[i]) + " squared mod N not equal to " + str(nums[i]))
-
 
     a = 1
     b = 1
