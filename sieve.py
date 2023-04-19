@@ -198,15 +198,6 @@ def solve(N, solution_vector, smooth_nums, x, factor_base, matrix2):
     
     return gcd(a+b, N)    
 
-
-#is n prime with some probability 
-def miller_rabin(n): 
-    if n == 2 or n == 3:
-        return True
-    if n % 2 == 0:
-        return False
-    pass
-
 def main():
     #N = 1009 * 191161
     #N = 4201 * 8011
