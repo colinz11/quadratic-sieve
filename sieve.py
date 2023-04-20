@@ -9,8 +9,9 @@ import random
 #4. Solve matri for null space finding perfect squares
 #5. Solve the congruence of squares to obtain factors 
 
+# https://en.wikipedia.org/wiki/Quadratic_sieve 
 
-#euclidian gcd algorithim
+#euclidian gcd algorithim FINISHED
 def gcd(a,b):
     if b > a:
         a, b = b, a
@@ -289,7 +290,11 @@ def main(N=21, epsilon=0.1):
     #N = 10000019 * 10000169
     #N = 100000007 * 10000169
     #N = 100000007 * 100000049
+<<<<<<< HEAD
     #N = 16921456439215439701
+=======
+    N = 16921456439215439701
+>>>>>>> 9fef4a78833dce337ffcfe2eda422ae1982ce2b0
     #N = 100000007 * 10000169312
 
     #N = 46839566299936919234246726809
