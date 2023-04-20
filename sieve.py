@@ -82,28 +82,29 @@ def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
     factors = {}
     for i in range(interval):
         
-        #sieve_num = int(int_pow(root + i, 2) - N)
-        sieve_num = int((root + i) * (root + i) - N)
-        if sieve_num > N:
-            sieve_num = sieve_num % N
-        if sieve_num == 0:
+        #f_i = int(int_pow(root + i, 2) - N)
+        f_i = int((root + i) * (root + i) - N)
+        if f_i > N:
+            f_i = f_i % N
+
+        if f_i == 0:
+            #this would create an infinite loop a few lines later
             continue
     
-  
-        sieve_static = [sieve_num][0]
+        f_i_original = f_i
         prime_factors = []
         for p in factor_base: 
-            while sieve_num % p == 0:#p is a prime factor
-                sieve_num //= p #divide by prime in factor base
+            while f_i % p == 0:#p is a prime factor
+                f_i //= p #divide by prime in factor base
                 prime_factors.append(p)
 
         
-        if sieve_num == 1:
-            smooth_nums.append(sieve_static)
-            factors[sieve_static] = prime_factors
+        if f_i == 1:
+            smooth_nums.append(f_i_original)
+            factors[f_i_original] = prime_factors
             x.append(i+root) #x+n
             if (len(smooth_nums) % 10 == 0):
-                print('Smooth Number ' + str(len(smooth_nums))  + ':'+ str(sieve_static))
+                print('Smooth Number ' + str(len(smooth_nums))  + ':'+ str(f_i_original))
         if len(smooth_nums) >= (len(factor_base) + extra_rows): 
               break
     return smooth_nums, x, factors
@@ -111,13 +112,13 @@ def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
 
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
-def build_matrix(factor_base, smooth_nums, factors):
+def make_matrix(factor_base, smooth_nums, factors):
     matrix = [] #binary version
     matrix_nb = [] #non-binary version
 
     for n in smooth_nums:
-        exp_vector = [0]*(len(factor_base))
-        exp_vector2 = [0]*(len(factor_base))
+        exp_vector = [0 for i in range(len(factor_base))]
+        exp_vector2 = [0 for i in range(len(factor_base))]
         prime_factors = factors[n]
 
         for i in range(len(factor_base)):
@@ -138,16 +139,14 @@ def matrix_transpose(matrix):
             new_matrix[i][j] = matrix[j][i]
     return new_matrix
 
-def find_left_null_space(matrix):
+def find_left_null_vectors(matrix):
     num_rows = len(matrix)
     num_cols = len(matrix[0])
-    solution_combos = [[0 for i in range(num_rows)] for j in range(num_rows)]
+    combos = [[0 for i in range(num_rows)] for j in range(num_rows)]
     rows = [i for i in range(num_rows)]
     for i in range(num_rows):
-        solution_combos[i][i] = 1
+        combos[i][i] = 1
     for piv_row_index in range(num_cols):
-        if (piv_row_index % 100 == 0):
-            print("piv row index " + str(piv_row_index))
         piv_row = matrix[piv_row_index]
         #need to ensure that piv_row[piv_row_index] == 1
         if (piv_row[piv_row_index] != 1):
@@ -180,79 +179,26 @@ def find_left_null_space(matrix):
 
                 row1 = rows[piv_row_index]
                 row2 = rows[other_row_index]
-                solution_combos[row2] = [(solution_combos[row1][i] + solution_combos[row2][i]) % 2 for i in range(num_rows)]
+                combos[row2] = [(combos[row1][i] + combos[row2][i]) % 2 for i in range(num_rows)]
     
     
-    return [solution_combos[rows[i]] for i in range(num_cols, num_rows)]      
+    return [combos[rows[i]] for i in range(num_cols, num_rows)]      
 
-
-
-
-#gives list of null spaces
-def gauss_elimination(matrix):
-    matrix = matrix_transpose(matrix)
-    marks = [False] * len(matrix[0])
-    
-    for i in range(len(matrix)): 
-        row = matrix[i]
-        for num in row: #search for pivot
-            if num == 1:
-                j = row.index(num) #column index
-                marks[j] = True
-                
-                for k in chain(range(0, i), range(i + 1, len(matrix))): #search for other 1s
-                    if matrix[k][j] == 1:
-                        for i in range(len(matrix[k])):
-                            matrix[k][i] = (matrix[k][i] + row[i]) % 2
-                break
-            
-  
-    matrix = matrix_transpose(matrix)
-    
-    solution_rows = []
-    for i in range(len(marks)): #find free columns
-        if not marks[i]:
-            free_row = [matrix[i], i]
-            solution_rows.append(free_row)
-    return solution_rows, marks, matrix
-
-#gets the correct indices from the null space
-def solve_row(matrix, marks, solution_rows, K):
-    
-    row = solution_rows[K][0]
-    indices = []
-
-    solution_vector = []
-
-    for i in range(len(row)):
-        if row[i] == 1:
-            indices.append(i)
-    
-    for r in range(len(matrix)):
-        for c in indices:
-            if matrix[r][c] == 1 and marks[r]:
-                solution_vector.append(r)
-    solution_vector.append(solution_rows[K][1])
-    return solution_vector
 
 #caulates a^2 = b^2 mod n and does gcd(a+b, n)
-def find_squared_congruence(N, solution_vector, smooth_nums, x, factor_base, matrix_nb):
-    solution_rows = []
-    for i in range(len(solution_vector)):
-        if solution_vector[i] == 1:
-            solution_rows.append(i)
-    nums = [smooth_nums[i] for i in solution_rows]
-    x_nums = [x[i] for i in solution_rows]
+def find_squared_congruence(null_vector, x, factor_base, matrix_nb):
+    combo_rows = []
+    for i in range(len(null_vector)):
+        if null_vector[i] == 1:
+            combo_rows.append(i)
+    x_nums = [x[i] for i in combo_rows]
     
-
-    #print(nums)
-    #print(x_nums)
     a = 1
     b = 1
     smooth_vector = [0 for i in factor_base] #this is an exponent vector
 
 
-    for i in solution_rows:
+    for i in combo_rows:
         for j in range(len(factor_base)):
             smooth_vector[j] += matrix_nb[i][j]
   
@@ -347,7 +293,7 @@ def main(N=21, epsilon=0.1):
     #N = 16921456439215439701
     #N = 100000007 * 10000169312
 
-    N = 46839566299936919234246726809
+    #N = 46839566299936919234246726809
     #N = 6172835808641975203638304919691358469663
     if check_prime(N):
         print("N is very likely prime")
@@ -358,42 +304,34 @@ def main(N=21, epsilon=0.1):
     print('Bound: ' + str(B))
     
     factor_base = find_factor_base(N, B)
-    #print("num primes in factor base is " + str(len(factor_base)))
-    #print("factor base is " + str(factor_base))
 
     time_0 = int(time.time() * 1000)
     print('Finding smooth numbers ...')
     smooth_nums, x, factors = find_smooth_numbers(factor_base, N, B**3, extra_rows=20)
-    #print("smooth_nums is " + str(smooth_nums))
-    #print("x is " + str(x))
     found_smooth_time_ms = int(time.time() * 1000) - time_0
 
     if len(smooth_nums) < len(factor_base):
         print('Not enough B-smooth numbers were found')
         return
-    
-    print('Found smooth numbers')
+    else:
+        print('Found smooth numbers')
+
     #below, matrix is all mod 2 entries, while matrix_nb has any positive integer for each entry
-    matrix, matrix_nb = build_matrix(factor_base, smooth_nums, factors) 
+    matrix, matrix_nb = make_matrix(factor_base, smooth_nums, factors) 
 
 
     time_1 = int(time.time() * 1000)
     print('Running Gaussian elimination ... ')
-    #solution_rows, marks, matrix = gauss_elimination(matrix)
     
 
-    solution_combos = find_left_null_space(matrix)
+    null_combos = find_left_null_vectors(matrix)
     elim_time = int(int(time.time() * 1000) - time_1)
-    num_solutions = len(solution_combos)
+    num_solutions = len(null_combos)
 
 
-
-    #for K in range(len(solution_rows)):
-    for K in range(num_solutions):
+    for s in range(num_solutions):
         print('Finding factors ...')
-        #solution_vector = solve_row(matrix, marks, solution_rows, K)
-        #[a, b] = find_squared_congruence(N, solution_vector, smooth_nums, x, factor_base, matrix_nb)
-        [a, b] = find_squared_congruence(N, solution_combos[K], smooth_nums, x, factor_base, matrix_nb)
+        [a, b] = find_squared_congruence(null_combos[s], x, factor_base, matrix_nb)
         factor = abs(gcd(a-b, N))
 
         if factor == 1 or factor == N:
