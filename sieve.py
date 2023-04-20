@@ -4,16 +4,15 @@ import time
 import random
 
 #1. generate B-smooth factor base
-#2. Find B-smooth relations using sieving and Tonelli-Shanks
+#2. Find B-smooth relations using sieving
 #3. Build exponent matrix mod 2 from relations
 #4. Solve matri for null space finding perfect squares
 #5. Solve the congruence of squares to obtain factors 
 
-# https://en.wikipedia.org/wiki/Quadratic_sieve 
 
-#euclidian gcd algorithim FINISHED
+#euclidian gcd algorithim
 def gcd(a,b):
-    if b > a:
+    if b > a: #make it so a > b
         a, b = b, a
 
     while b != 0:
@@ -26,13 +25,11 @@ def gcd(a,b):
 #compute a^n
 def int_pow(a, n):
     result = 1
-    for i in range(n):
+    for i in range(n): 
         result *= a
     return result
 
-
-
-#returns a^n mod p FINISHED
+#returns a^n mod p
 def exp_mod(a, n, p):
     ret = 1
     while n > 0:
@@ -42,25 +39,23 @@ def exp_mod(a, n, p):
         n //= 2
     return ret
 
-
-#get legendre number, we want when result is 1 FINISHED
+#get legendre number, we want when result is 1
 def legendre_num(a, p):
     return exp_mod(a, (p - 1) // 2, p)
 
-
-#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p FINISHED
+#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p
 def find_factor_base(N, B):
     if B < 2:
         return []
     
     prime_bool = [True for i in range(B + 1)]
-    p = 2
+    p = 2 # start a first prime
 
     factor_base = []
     while p < (B + 1): 
         if prime_bool[p]:
-            if legendre_num(N,p) == 1:
-                    factor_base.append(p)
+            if legendre_num(N,p) == 1: #factor base only includes primes with legrendre num equal to 1
+                    factor_base.append(p) 
 
             #mark off all multiples of p as being composite
             for j in range(2 * p, B + 1, p):
@@ -68,13 +63,13 @@ def find_factor_base(N, B):
         p += 1
     return factor_base
    
-#picks optimal bound B FINISHED
-def set_B(N, epsilon=0.1):
+#picks optimal bound B
+def set_B(N, epsilon=0.1): 
     e = 2.71828183
     B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
     return ceil(B)
 
-#does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers. Then use Tonelli and Shanks to compute resiudes for each prime in factor base
+#does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers.
 def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
     root = ceil(sqrt(N))
     x = [] 
@@ -109,8 +104,6 @@ def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
               break
     return smooth_nums, x, factors
 
-
-
 #builds matrix of exponents of prime factors of smooth numbers mod 2
 def make_matrix(factor_base, smooth_nums, factors):
     matrix = [] #binary version
@@ -129,7 +122,7 @@ def make_matrix(factor_base, smooth_nums, factors):
         matrix_nb.append(exp_vector2)
     return matrix, matrix_nb
 
-
+#tranposes a matrix
 def matrix_transpose(matrix):
     original_num_rows = len(matrix)
     original_num_cols = len(matrix[0])
@@ -139,6 +132,7 @@ def matrix_transpose(matrix):
             new_matrix[i][j] = matrix[j][i]
     return new_matrix
 
+#doess row reductions to find the left null space
 def find_left_null_vectors(matrix):
     num_rows = len(matrix)
     num_cols = len(matrix[0])
@@ -181,9 +175,7 @@ def find_left_null_vectors(matrix):
                 row2 = rows[other_row_index]
                 combos[row2] = [(combos[row1][i] + combos[row2][i]) % 2 for i in range(num_rows)]
     
-    
     return [combos[rows[i]] for i in range(num_cols, num_rows)]      
-
 
 #caulates a^2 = b^2 mod n and does gcd(a+b, n)
 def find_squared_congruence(null_vector, x, factor_base, matrix_nb):
@@ -197,22 +189,19 @@ def find_squared_congruence(null_vector, x, factor_base, matrix_nb):
     b = 1
     smooth_vector = [0 for i in factor_base] #this is an exponent vector
 
-
     for i in combo_rows:
         for j in range(len(factor_base)):
-            smooth_vector[j] += matrix_nb[i][j]
+            smooth_vector[j] += matrix_nb[i][j] #gets the exponent power for each prime
   
     for i in range(len(smooth_vector)):
         f = 1
         for j in range(smooth_vector[i] >> 1):
             f = f * (factor_base[i])
-        a *= f
+        a *= f 
 
     for n in x_nums:
         b *= n
     return (a, b)   
-
-
 
 # run Miller rabin several times with different values of a
 def check_prime(n, iter=10):
@@ -243,58 +232,9 @@ def check_prime(n, iter=10):
             j += 1
     return True
 
-#tonelli algorithim copied from internet, two solutionrs r and p-r
-def tonelli_shanks(n, p): 
-    q = p - 1
-    s = 0
-
-    while q % 2 == 0:
-        q //= 2
-        s += 1
-
-    if s == 1:
-        r = exp_mod(n, (p + 1) // 4, p)
-        return r, p-r
-    
-    for z in range(2, p):
-        if p - 1 == legendre_num(z, p):
-            break
-
-    c = exp_mod(z, q, p)
-    r = exp_mod(n, (q + 1) // 2, p)
-    t = exp_mod(n, q, p)
-    m = s
-    t2 = 0
-
-    while (t - 1) % p != 0:
-        t2 = (t * t) % p
-        for i in range(1, m):
-            if (t2 - 1) % p == 0:
-                break
-            t2 = (t2 * t2) % p
-        b = exp_mod(c, 1 << (m - i - 1), p)
-        r = (r * b) % p
-        c = (b * b) % p
-        t = (t * c) % p
-        m = i
-    return r, p-r
-
 def main(N=21, epsilon=0.1):
     start_time_ms = int(time.time() * 1000)
-    #N = 55587
-    #N = 1009 * 191161
-    #N = 37 * 1009
-    #N = 484459 * 191161
-    #N = 4201 * 484459
-    #N = 1000033 * 1000003
-    #N = 10000019 * 10000169
-    #N = 100000007 * 10000169
-    #N = 100000007 * 100000049
     N = 16921456439215439701
-    #N = 100000007 * 10000169312
-
-    #N = 46839566299936919234246726809
-    #N = 6172835808641975203638304919691358469663
     if check_prime(N):
         print("N is very likely prime")
         return
@@ -319,15 +259,12 @@ def main(N=21, epsilon=0.1):
     #below, matrix is all mod 2 entries, while matrix_nb has any positive integer for each entry
     matrix, matrix_nb = make_matrix(factor_base, smooth_nums, factors) 
 
-
     time_1 = int(time.time() * 1000)
     print('Running Gaussian elimination ... ')
     
-
     null_combos = find_left_null_vectors(matrix)
     elim_time = int(int(time.time() * 1000) - time_1)
     num_solutions = len(null_combos)
-
 
     for s in range(num_solutions):
         print('Finding factors ...')
