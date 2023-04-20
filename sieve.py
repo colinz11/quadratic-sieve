@@ -1,6 +1,7 @@
-from math import sqrt, exp, log, ceil
+from math import sqrt, log, ceil
 from itertools import chain
 import time
+import random
 
 #1. generate B-smooth factor base
 #2. Find B-smooth relations using sieving and Tonelli-Shanks
@@ -32,7 +33,7 @@ def int_pow(a, n):
 
 
 #returns a^n mod p FINISHED
-def power(a, n, p):
+def exp_mod(a, n, p):
     ret = 1
     while n > 0:
         if n % 2 == 1:
@@ -43,43 +44,52 @@ def power(a, n, p):
 
 
 #get legendre number, we want when result is 1 FINISHED
-def legendre(a, p):
-    return power(a, (p - 1) // 2, p)
+def legendre_num(a, p):
+    return exp_mod(a, (p - 1) // 2, p)
 
 
 #generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p FINISHED
-def find_factor_base(N, B, epsilon = 0.0000001):
+def find_factor_base(N, B):
     if B < 2:
         return []
     
-    is_prime = [True] * (B+1)
+    prime_bool = [True for i in range(B + 1)]
     p = 2
 
     factor_base = []
-    while p < B + 1: 
-        if is_prime[p]:
-            if legendre(N,p) == 1:
+    while p < (B + 1): 
+        if prime_bool[p]:
+            if legendre_num(N,p) == 1:
                     factor_base.append(p)
+
+            #mark off all multiples of p as being composite
             for j in range(2 * p, B + 1, p):
-                is_prime[j] = False
+                prime_bool[j] = False
         p += 1
     return factor_base
    
 #picks optimal bound B FINISHED
-def get_smoothness_bound(N):
-    epsilon = 0.1
-    e = 2.71
+def set_B(N, epsilon=0.1):
+    e = 2.71828183
     B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
     return ceil(B)
 
 #does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers. Then use Tonelli and Shanks to compute resiudes for each prime in factor base
-def find_smooth(factor_base, N, interval, tolerance=3):
+def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
     root = ceil(sqrt(N))
     x = [] 
     smooth_nums = []
     factors = {}
     for i in range(interval):
-        sieve_num = int(int_pow(root + i, 2) - N)
+        
+        #sieve_num = int(int_pow(root + i, 2) - N)
+        sieve_num = int((root + i) * (root + i) - N)
+        if sieve_num > N:
+            sieve_num = sieve_num % N
+        if sieve_num == 0:
+            continue
+    
+  
         sieve_static = [sieve_num][0]
         prime_factors = []
         for p in factor_base: 
@@ -93,15 +103,17 @@ def find_smooth(factor_base, N, interval, tolerance=3):
             factors[sieve_static] = prime_factors
             x.append(i+root) #x+n
             if (len(smooth_nums) % 10 == 0):
-                print(str(time.ctime()) + 'Smooth Number ' + str(len(smooth_nums))  + ':'+ str(sieve_static))
-        if len(smooth_nums) >= (len(factor_base) * tolerance) + 1: 
+                print('Smooth Number ' + str(len(smooth_nums))  + ':'+ str(sieve_static))
+        if len(smooth_nums) >= (len(factor_base) + extra_rows): 
               break
     return smooth_nums, x, factors
+
+
 
 #builds matrix of exponents of prime factors of smooth numbers mod 2
 def build_matrix(factor_base, smooth_nums, factors):
     matrix = [] #binary version
-    matrix2 = [] #non-binary version
+    matrix_nb = [] #non-binary version
 
     for n in smooth_nums:
         exp_vector = [0]*(len(factor_base))
@@ -113,25 +125,72 @@ def build_matrix(factor_base, smooth_nums, factors):
                 exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 #get exponenet vector of prime factors mod 2
                 exp_vector2[i] = prime_factors.count(factor_base[i])
         matrix.append(exp_vector)
-        matrix2.append(exp_vector2)
-    return matrix, matrix2
-
-def factor(n, factor_base):#trial division from factor base
-    factors = []
-
-    for p in factor_base:
-        while n % p == 0:
-            factors.append(p)
-            n //= p
-    return factors
+        matrix_nb.append(exp_vector2)
+    return matrix, matrix_nb
 
 
-def transpose(matrix):
-    return [[matrix[i][j] for i in range(len(matrix))] for j in range(len(matrix[0]))]
+def matrix_transpose(matrix):
+    original_num_rows = len(matrix)
+    original_num_cols = len(matrix[0])
+    new_matrix = [[0 for i in range(original_num_rows)] for j in range(original_num_cols)]
+    for i in range(original_num_cols):
+        for j in range(original_num_rows):
+            new_matrix[i][j] = matrix[j][i]
+    return new_matrix
+
+def find_left_null_space(matrix):
+    num_rows = len(matrix)
+    num_cols = len(matrix[0])
+    solution_combos = [[0 for i in range(num_rows)] for j in range(num_rows)]
+    rows = [i for i in range(num_rows)]
+    for i in range(num_rows):
+        solution_combos[i][i] = 1
+    for piv_row_index in range(num_cols):
+        if (piv_row_index % 100 == 0):
+            print("piv row index " + str(piv_row_index))
+        piv_row = matrix[piv_row_index]
+        #need to ensure that piv_row[piv_row_index] == 1
+        if (piv_row[piv_row_index] != 1):
+            new_row_index = piv_row_index + 1
+            while (new_row_index < num_rows):
+                if matrix[new_row_index][piv_row_index] == 1:
+                    #we can swap this with the pivot row
+                    original_copy = [k for k in piv_row]
+                    new_copy = [k for k in matrix[new_row_index]]
+                    matrix[piv_row_index] = new_copy
+                    matrix[new_row_index] = original_copy
+                    piv_row = new_copy
+
+                    row_copy = rows[piv_row_index]
+                    rows[piv_row_index] = rows[new_row_index]
+                    rows[new_row_index] = row_copy
+                    break
+                new_row_index += 1
+        if piv_row[piv_row_index] != 1:
+            continue
+        #other_row_indices = [i for i in range(piv_row_index)] + [i for i in range(piv_row_index +1, num_rows)]     
+        other_row_indices =  [i for i in range(piv_row_index +1, num_rows)]   
+        #print(other_row_indices)       
+        for other_row_index in other_row_indices:
+   
+            other_row = matrix[other_row_index]
+            if (other_row[piv_row_index] == 1):
+                #add piv_row (mod 2) to get a 0 in the pivot column
+                matrix[other_row_index] = [(other_row[i] + piv_row[i]) % 2 for i in range(num_cols)]
+
+                row1 = rows[piv_row_index]
+                row2 = rows[other_row_index]
+                solution_combos[row2] = [(solution_combos[row1][i] + solution_combos[row2][i]) % 2 for i in range(num_rows)]
+    
+    
+    return [solution_combos[rows[i]] for i in range(num_cols, num_rows)]      
+
+
+
 
 #gives list of null spaces
 def gauss_elimination(matrix):
-    matrix = transpose(matrix)
+    matrix = matrix_transpose(matrix)
     marks = [False] * len(matrix[0])
     
     for i in range(len(matrix)): 
@@ -148,7 +207,7 @@ def gauss_elimination(matrix):
                 break
             
   
-    matrix = transpose(matrix)
+    matrix = matrix_transpose(matrix)
     
     solution_rows = []
     for i in range(len(marks)): #find free columns
@@ -177,55 +236,66 @@ def solve_row(matrix, marks, solution_rows, K):
     return solution_vector
 
 #caulates a^2 = b^2 mod n and does gcd(a+b, n)
-def solve(N, solution_vector, smooth_nums, x, factor_base, matrix2):
-    nums = [smooth_nums[i] for i in solution_vector]
-    x_nums = [x[i] for i in solution_vector]
+def find_squared_congruence(N, solution_vector, smooth_nums, x, factor_base, matrix_nb):
+    solution_rows = []
+    for i in range(len(solution_vector)):
+        if solution_vector[i] == 1:
+            solution_rows.append(i)
+    nums = [smooth_nums[i] for i in solution_rows]
+    x_nums = [x[i] for i in solution_rows]
+    
 
-    for i in range(len(x_nums)):
-        if ((x_nums[i] ** 2 % N) != nums[i] ):
-            print("wtf, " + str(x_nums[i]) + " squared mod N not equal to " + str(nums[i]))
-
-
+    #print(nums)
+    #print(x_nums)
     a = 1
     b = 1
     smooth_vector = [0 for i in factor_base] #this is an exponent vector
 
 
-    for i in solution_vector:
+    for i in solution_rows:
         for j in range(len(factor_base)):
-            smooth_vector[j] += matrix2[i][j]
-
+            smooth_vector[j] += matrix_nb[i][j]
+  
     for i in range(len(smooth_vector)):
         f = 1
         for j in range(smooth_vector[i] >> 1):
             f = f * (factor_base[i])
-
         a *= f
 
     for n in x_nums:
         b *= n
+    return (a, b)   
 
 
-    
-    return gcd(a+b, N)    
 
-
-#newtons method for sqrt
-def newton_sqrt(n): 
-    approx = n/2
-    closer = (approx + n/approx)/2
-    while closer != approx:
-        approx = closer
-        closer = (approx + n/approx)/2
-    return approx
-
-#is n prime with some probability 
-def miller_rabin(n): 
-    if n == 2 or n == 3:
-        return True
-    if n % 2 == 0:
+# run Miller rabin several times with different values of a
+def check_prime(n, iter=10):
+    if (pow(2, n-1, n) != 1):
         return False
-    pass
+    m = 1
+    beta = n -1
+    k = 0
+    while (beta % 2 == 0):
+        beta = beta >> 1
+        k += 1
+    m = (n-1) >> k 
+    for i in range(iter):
+        a = random.randint(2, n-2)
+        b_0 = exp_mod(a, m, n)
+        if (b_0 == 1) or (b_0 == -1) or (b_0 == n-1):
+            #n is probably prime
+            continue
+        b_j = b_0
+        j = 1
+        while (j) < k:
+            b_j = (b_j * b_j) % n
+            if (b_j == 1):
+                return False
+            elif (b_j == -1) or (b_j == n-1):
+                #n is probably prime
+                break
+            j += 1
+    return True
 
 #tonelli algorithim copied from internet, two solutionrs r and p-r
 def tonelli_shanks(n, p): 
@@ -237,16 +307,16 @@ def tonelli_shanks(n, p):
         s += 1
 
     if s == 1:
-        r = power(n, (p + 1) // 4, p)
+        r = exp_mod(n, (p + 1) // 4, p)
         return r, p-r
     
     for z in range(2, p):
-        if p - 1 == legendre(z, p):
+        if p - 1 == legendre_num(z, p):
             break
 
-    c = power(z, q, p)
-    r = power(n, (q + 1) // 2, p)
-    t = power(n, q, p)
+    c = exp_mod(z, q, p)
+    r = exp_mod(n, (q + 1) // 2, p)
+    t = exp_mod(n, q, p)
     m = s
     t2 = 0
 
@@ -256,62 +326,86 @@ def tonelli_shanks(n, p):
             if (t2 - 1) % p == 0:
                 break
             t2 = (t2 * t2) % p
-        b = power(c, 1 << (m - i - 1), p)
+        b = exp_mod(c, 1 << (m - i - 1), p)
         r = (r * b) % p
         c = (b * b) % p
         t = (t * c) % p
         m = i
     return r, p-r
 
-def main():
+def main(N=21, epsilon=0.1):
+    start_time_ms = int(time.time() * 1000)
+    #N = 55587
     #N = 1009 * 191161
-    #N = 4201 * 8011
+    #N = 37 * 1009
     #N = 484459 * 191161
     #N = 4201 * 484459
     #N = 1000033 * 1000003
     #N = 10000019 * 10000169
     #N = 100000007 * 10000169
     #N = 100000007 * 100000049
-    N = 16921456439215439701
-    #N = 46839566299936919234246726809
-    #N = 6172835808641975203638304919691358469663
+    #N = 16921456439215439701
+    #N = 100000007 * 10000169312
 
-    B = get_smoothness_bound(N)
+    N = 46839566299936919234246726809
+    #N = 6172835808641975203638304919691358469663
+    if check_prime(N):
+        print("N is very likely prime")
+        return
+
+    B = set_B(N, epsilon)
 
     print('Bound: ' + str(B))
     
     factor_base = find_factor_base(N, B)
-    print("num primes in factor base is " + str(len(factor_base)))
+    #print("num primes in factor base is " + str(len(factor_base)))
+    #print("factor base is " + str(factor_base))
 
-    
+    time_0 = int(time.time() * 1000)
     print('Finding smooth numbers ...')
-    smooth_nums, x, factors = find_smooth(factor_base, N, B**3, tolerance=1.01)
+    smooth_nums, x, factors = find_smooth_numbers(factor_base, N, B**3, extra_rows=20)
+    #print("smooth_nums is " + str(smooth_nums))
+    #print("x is " + str(x))
+    found_smooth_time_ms = int(time.time() * 1000) - time_0
 
     if len(smooth_nums) < len(factor_base):
-        print('No smooth numbers')
+        print('Not enough B-smooth numbers were found')
         return
     
     print('Found smooth numbers')
-    #below, matrix is all mod 2 entries, while matrix2 has any positive integer for each entry
-    matrix, matrix2 = build_matrix(factor_base, smooth_nums, factors) 
-
-    print('Running guass elimination ... ')
-    solution_rows, marks, matrix = gauss_elimination(matrix)
+    #below, matrix is all mod 2 entries, while matrix_nb has any positive integer for each entry
+    matrix, matrix_nb = build_matrix(factor_base, smooth_nums, factors) 
 
 
+    time_1 = int(time.time() * 1000)
+    print('Running Gaussian elimination ... ')
+    #solution_rows, marks, matrix = gauss_elimination(matrix)
+    
 
-    for K in range(len(solution_rows)):
+    solution_combos = find_left_null_space(matrix)
+    elim_time = int(int(time.time() * 1000) - time_1)
+    num_solutions = len(solution_combos)
+
+
+
+    #for K in range(len(solution_rows)):
+    for K in range(num_solutions):
         print('Finding factors ...')
-        solution_vector = solve_row(matrix, marks, solution_rows, K)
-        factor = solve(N, solution_vector, smooth_nums, x, factor_base, matrix2)
+        #solution_vector = solve_row(matrix, marks, solution_rows, K)
+        #[a, b] = find_squared_congruence(N, solution_vector, smooth_nums, x, factor_base, matrix_nb)
+        [a, b] = find_squared_congruence(N, solution_combos[K], smooth_nums, x, factor_base, matrix_nb)
+        factor = abs(gcd(a-b, N))
+
         if factor == 1 or factor == N:
-            print(factor)
-            print("Trivial factor")
+            print("Trivial Factor")
             continue
         else:
-            print(factor)
-            print(N/factor)
-            return
+            print("N = " + str(factor) + " * " + str(int(N/factor)))
+            total_time = int(time.time() * 1000) - start_time_ms
+            return [found_smooth_time_ms, elim_time, total_time]
+        
+    #if the code reaches this point, no nontrivial factors have been found
+    print("Could not find a nontrivial factor")
 
 if __name__ == "__main__":
     main()
