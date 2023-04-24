@@ -120,7 +120,7 @@ def check_smooth(f, x, N, factor_base, smooth_nums, x_list, factors):
         x_list.append(x)
         f_orig = x * x - N
         smooth_nums.append(f_orig)
-        if (len(smooth_nums) % 20 == 0):
+        if (len(smooth_nums) % 20 == 1):
             print("smooth nums: " + str(len(smooth_nums)))
         #now find factors of f_orig
         prime_factors = []
@@ -193,8 +193,8 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
         start=end+1
         end = start+length
 
-        #f_x = [(root + start + i) * (root + start + i) - N for i in range(length)]
-        f_x = [log((root + start + i) * (root + start + i) - N) for i in range(length)]
+        f_x = [(root + start + i) * (root + start + i) - N for i in range(length)]
+        #f_x = [log((root + start + i) * (root + start + i) - N) for i in range(length)]
         for i in range(len(factor_base)):
             p_i = factor_base[i]
             (x1, x2) = solutions_mod_p[i]
@@ -217,18 +217,18 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
             
             for x_val in range(first_val_1, length, p_i):
                 #divide out p
-                #f_x[x_val] = lower_register(f_x[x_val], p_i)
-                f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
+                f_x[x_val] = lower_register(f_x[x_val], p_i)
+                #f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
                 #check that x_val+start is correct argument
-                #check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
-                check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
+                check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
+                #check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
 
             for x_val in range(first_val_2, length, p_i):
                 #divide out p
-                #f_x[x_val] = lower_register(f_x[x_val], p_i)
-                f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
-                #check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
-                check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
+                f_x[x_val] = lower_register(f_x[x_val], p_i)
+                #f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
+                check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
+                #check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
 
 
     return smooth_nums, x_list, factors
@@ -310,7 +310,7 @@ def find_left_null_vectors(matrix):
     return [combos[rows[i]] for i in range(num_cols, num_rows)]      
 
 #caulates a^2 = b^2 mod n and does gcd(a+b, n)
-def find_squared_congruence(null_vector, x, factor_base, matrix_nb):
+def find_squared_congruence(null_vector, x, factor_base, matrix_nb, N):
     combo_rows = []
     for i in range(len(null_vector)):
         if null_vector[i] == 1:
@@ -333,6 +333,8 @@ def find_squared_congruence(null_vector, x, factor_base, matrix_nb):
 
     for n in x_nums:
         b *= n
+    if ((a * a) % N ) != ((b * b) % N):
+        print("wtf, problem!")
     return (a, b)   
 
 # run Miller rabin several times with different values of a
@@ -446,14 +448,14 @@ def factor(N=21, epsilon=0.001):
     num_solutions = len(null_combos)
 
     for s in range(num_solutions):
-        [a, b] = find_squared_congruence(null_combos[s], x, factor_base, matrix_nb)
+        [a, b] = find_squared_congruence(null_combos[s], x, factor_base, matrix_nb, N)
         possible_factor = abs(gcd(a-b, N))
 
         if possible_factor == 1 or possible_factor == N:
             print("Trivial Factor")
             continue
         else:
-            print("N = " + str(possible_factor) + " * " + str(int(N/possible_factor)))
+            print("N = " + str(possible_factor) + " * " + str(int(N//possible_factor)))
             total_time = int(time.time() * 1000) - start_time_ms
             print("total time: " + str(total_time) + "ms, finding smooths time: " + str(found_smooth_time_ms) +
                    "ms, Gaussian elim time: " + str(elim_time) + "ms")
@@ -477,10 +479,10 @@ def main():
     #N = 100000007 * 10000169
     #N = 100000007 * 100000049
     #N = 16921456439215439701
-    N = 46839566299936919234246726809
+    #N = 46839566299936919234246726809
     #N = 1000000000100011 * 1084051191974761
     #N = 6172835808641975203638304919691358469663
-    #N = 3744843080529615909019181510330554205500926021947
+    N = 3744843080529615909019181510330554205500926021947
     return factor(N, epsilon=0.005)
 if __name__ == "__main__":
     print(main())
