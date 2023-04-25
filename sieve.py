@@ -191,9 +191,9 @@ def check_smooth(f, x, N, factor_base, smooth_nums, x_list, factors):
     """Checks if a number is smooth
 
     Args:
-        f (_type_): Smooth number to check
+        f (int): Smooth number to check
         x (int): Square root of N
-        N (_type_): Number to factor
+        N (int): Number to factor
         factor_base (List[int]): Factor base
         smooth_nums (List[int]): List of smooth numbers
         x_list (List[int]):  A list of x+n corresponding to each smooth number
@@ -222,9 +222,9 @@ def check_smooth_log(f, x, N, factor_base, smooth_nums, x_list, factors, thresho
     """Checks if a number is smooth, but log version
 
     Args:
-        f (_type_): Smooth number to check
+        f (int): Smooth number to check
         x (int): Square root of N
-        N (_type_): Number to factor
+        N (int): Number to factor
         factor_base (List[int]): Factor base
         smooth_nums (List[int]): List of smooth numbers
         x_list (List[int]):  A list of x+n corresponding to each smooth number
@@ -257,7 +257,7 @@ def find_smooth_numbers_TS(factor_base, N, extra_rows=1):
 
     Args:
         factor_base (int): Factor Base
-        N (_type_): Number to factor
+        N (int): Number to factor
         extra_rows (int, optional): Number of extra B-Smooth numbers to find. Defaults to 1
 
     Returns:
