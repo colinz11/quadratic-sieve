@@ -22,12 +22,6 @@ def gcd(a,b):
         b %= a
     return 1
 
-#compute a^n
-def int_pow(a, n):
-    result = 1
-    for i in range(n): 
-        result *= a
-    return result
 
 #returns a^n mod p
 def exp_mod(a, n, p):
@@ -70,14 +64,13 @@ def set_B(N, epsilon=0.1):
     return ceil(B)
 
 #does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers.
-def find_smooth_numbers(factor_base, N, interval, extra_rows=1):
+def find_smooth_numbers_brute_force(factor_base, N, interval, extra_rows=1):
     root = ceil(sqrt(N))
     x = [] 
     smooth_nums = []
     factors = {}
     for i in range(interval):
         
-        #f_i = int(int_pow(root + i, 2) - N)
         f_i = int((root + i) * (root + i) - N)
         if f_i > N:
             f_i = f_i % N
@@ -121,7 +114,7 @@ def check_smooth(f, x, N, factor_base, smooth_nums, x_list, factors):
         f_orig = x * x - N
         smooth_nums.append(f_orig)
         if (len(smooth_nums) % 20 == 1):
-            print("smooth nums: " + str(len(smooth_nums)))
+            print(str(time.ctime()) + "smooth nums: " + str(len(smooth_nums)))
         #now find factors of f_orig
         prime_factors = []
         for p in factor_base:
@@ -136,20 +129,6 @@ def check_smooth_log(f, x, N, factor_base, smooth_nums, x_list, factors, thresho
     elif f < threshold:
 
         #f(x) is smooth, where f(x) = (x)^2 - N
-        '''
-        x_list.append(x)
-        f_orig = x * x - N
-        smooth_nums.append(f_orig)
-        if (len(smooth_nums) % 20 == 0):
-            print("smooth nums: " + str(len(smooth_nums)))
-        #now find factors of f_orig
-        prime_factors = []
-        for p in factor_base:
-            while f_orig % p == 0:
-                f_orig //= p
-                prime_factors.append(p)
-        factors[x * x - N] = prime_factors
-        '''
         prime_factors = []
         f_orig = x * x - N
         for p in factor_base:
@@ -166,11 +145,6 @@ def check_smooth_log(f, x, N, factor_base, smooth_nums, x_list, factors, thresho
             factors[x * x - N] = prime_factors
         
 
-
-
-
-
-
 def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
     root = ceil(sqrt(N))
     x_list = [] 
@@ -178,13 +152,16 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
     factors = {}
     num_needed = len(factor_base) + extra_rows
     print("number of smooth numbers needed is " + str(num_needed))
+    print("number of primes in factor base is " + str(len(factor_base)))
+    print("Biggest prime in factor base is " + str(factor_base[-1]))
 
-    solutions_mod_p = [TS(i, N) for i in factor_base]
+    solutions_mod_p = [tonelli_shanks(i, N) for i in factor_base]
 
     x_upper_lim = int((sqrt(2) - 1)*sqrt(N) - 1)
    
 
-    length = min(max(factor_base) * 10, x_upper_lim)
+    #length = min(max(factor_base) + 1, x_upper_lim)
+    length = 250000
     log_p = [log(p) for p in factor_base]
     threshold = log(max(factor_base) + 1)
     
@@ -199,14 +176,9 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
             p_i = factor_base[i]
             (x1, x2) = solutions_mod_p[i]
             #iterate through the f_x array dividing out p_i 
-            #first_val_1 = (ceil((root + start) / p_i)  * p_i) - start - root + x1 #first val s.t. f_x[first_val_1] divisible by p_i
+
+            #first val s.t. f_x[first_val_1] divisible by p_i
             first_val_1 = (0 - ((root + start) // (0 - p_i))  * p_i) - start - root + x1
-            v1 = root + start
-            v2 = 0 -(v1 // (0 - p_i))
-            v3 = ceil(v2)
-            v4 = v3 * p_i
-            v5 = v4 - start - root + x1
-            #first_val_2 = (ceil((root + start) / p_i)  * p_i) - start - root + x2
             first_val_2 = (0 - ((root + start) // (0 - p_i))  * p_i) - start - root + x2
             if first_val_1 >= p_i:
                 first_val_1 -= p_i
@@ -339,7 +311,7 @@ def find_squared_congruence(null_vector, x, factor_base, matrix_nb, N):
 
 # run Miller rabin several times with different values of a
 def check_prime(n, iter=10):
-    if (pow(2, n-1, n) != 1):
+    if (exp_mod(2, n-1, n) != 1):
         return False
     m = 1
     beta = n -1
@@ -367,44 +339,61 @@ def check_prime(n, iter=10):
     return True
 
 
-#copied from internet
-def TS(p, n):
-
+#returns two solutions to x^2 congruent to n mod p
+def tonelli_shanks(p, n):
     if legendre_num(n, p) != 1:
         print("not a square (mod p)")
-    q = p - 1
-    s = 0
-    while q % 2 == 0:
-        q //= 2
-        s += 1
-    if s == 1:
-        r = pow(n, (p + 1) // 4, p)
-        r2 = (p - r) % p
-        return (r, r2)
-    z = 2
-    for z_val in range(2, p):
-        z = z_val
-        if p - 1 == legendre_num(z_val, p):
-            break
-    c = pow(z, q, p)
-    r = pow(n, (q + 1) // 2, p)
-    t = pow(n, q, p)
-    m = s
-    t2 = 0
-    while (t - 1) % p != 0:
-        t2 = (t * t) % p
-        
-        for i in range(1, m):
-            if (t2 - 1) % p == 0:
-                break
-            t2 = (t2 * t2) % p
-        b = pow(c, 1 << (m - i - 1), p)
-        r = (r * b) % p
-        c = (b * b) % p
-        t = (t * c) % p
-        m = i
 
-    return (r, (p-r)%p)
+
+    #now going to find s and e s.t. s * 2^e = p-1
+    s = p - 1
+    e = 0
+    while (s % 2) == 0:
+        e += 1
+        s //= 2
+    if e == 1:
+        x_1 = exp_mod(n, (p + 1) // 4, p)
+        x_2 = (p - x_1) % p
+        return (x_1, x_2)
+
+    #now finding q s.t. q^{(p-1)/2} is congruent to -1 mod p
+    q = 2
+    for q_test in range(2, p, 1):
+        if legendre_num(q_test, p) == p-1:
+            q = q_test
+            break
+    
+
+    #initializing some variables
+    x = exp_mod(n, (s+1)//2, p)
+    b = exp_mod(n, s, p)              
+    g = exp_mod(q, s, p)
+    r = e  
+
+    #now iterating until we find a solution
+    while (b-1) % p != 0:
+        b_sq = (b * b) % p
+        i = 1
+        while (i < r):
+            if (b_sq - 1) % p == 0:
+                break
+            b_sq = (b_sq * b_sq) % p
+            if (i + 1 < r):
+                i+= 1
+            else:
+                break
+        
+        a = exp_mod(g, 1 << (r - i - 1), p)
+        x = (x * a) % p
+        g = (a * a) % p
+        b = (b * g) % p
+        r = i
+    return (x, (p - x) % p)
+        
+
+
+    
+
 
 def factor(N=21, epsilon=0.001):
     start_time_ms = int(time.time() * 1000)
@@ -423,11 +412,11 @@ def factor(N=21, epsilon=0.001):
     print('Finding smooth numbers ...')
     extra_rows = int(20 + log(N))
     if (N < ( 10 ** 15 )):
-        smooth_nums, x, factors = find_smooth_numbers(factor_base, N, B**3, extra_rows)
+        smooth_nums, x, factors = find_smooth_numbers_brute_force(factor_base, N, B**3, extra_rows)
     else:
         smooth_nums, x, factors = find_smooth_numbers_TS(factor_base, N, B**3, extra_rows)
         if smooth_nums == None:
-            smooth_nums, x, factors = find_smooth_numbers(factor_base, N, B**3, extra_rows)
+            smooth_nums, x, factors = find_smooth_numbers_brute_force(factor_base, N, B**3, extra_rows)
     found_smooth_time_ms = (time.time() * 1000) - time_0
 
     if len(smooth_nums) < len(factor_base):
@@ -483,6 +472,7 @@ def main():
     #N = 1000000000100011 * 1084051191974761
     #N = 6172835808641975203638304919691358469663
     N = 3744843080529615909019181510330554205500926021947
+    
     return factor(N, epsilon=0.005)
 if __name__ == "__main__":
     print(main())
