@@ -1,18 +1,28 @@
 from math import sqrt, log, ceil
-from itertools import chain
 import time
 import random
 
-#1. generate B-smooth factor base
-#2. Find B-smooth relations using sieving
-#3. Build exponent matrix mod 2 from relations
-#4. Solve matri for null space finding perfect squares
-#5. Solve the congruence of squares to obtain factors 
+'''
+Math 404 Cryptography project. 
 
+A quadratic sieve algorithm to factor large numbers.
 
-#euclidian gcd algorithim
+Authors: Keith Cressman, Aakash Kothapally, Colin Zhu
+'''
+
 def gcd(a,b):
-    if b > a: #make it so a > b
+    """Finds gcd of two numbers
+
+    Args:
+        a (int)
+        b (int)
+
+    Returns:
+        int: Gcd of a and b
+    """
+
+    #make it so a > b
+    if b > a: 
         a, b = b, a
 
     while b != 0:
@@ -22,9 +32,18 @@ def gcd(a,b):
         b %= a
     return 1
 
-
-#returns a^n mod p
 def exp_mod(a, n, p):
+    """Calculates a^n mod p
+
+    Args:
+        a (int): Base
+        n (int): Exponent value
+        p (int): Divisor 
+
+    Returns:
+        int: a^n mod p
+    """
+
     ret = 1
     while n > 0:
         if n % 2 == 1:
@@ -33,22 +52,45 @@ def exp_mod(a, n, p):
         n //= 2
     return ret
 
-#get legendre number, we want when result is 1
 def legendre_num(a, p):
+    """Gets the Legendre Number
+
+    Args:
+        a (int): Base
+        p (int): Some prime
+
+    Returns:
+        int: Returns 1 if a is a quadratic residue modulo p 
+    """
+
     return exp_mod(a, (p - 1) // 2, p)
 
-#generate primes up until B and use euler’s criterion to determine whether N is a quadratic residue mod p
 def find_factor_base(N, B):
+    """Generates factor base using Euler’s criterion to determine whether N is a quadratic residue mod p
+
+    Args:
+        N (int): Number to factor
+        B (int): Upper bound to stop searching for primes
+
+    Returns:
+        List[int]: A list of primes in the factor base
+    """
+
     if B < 2:
         return []
     
     prime_bool = [True for i in range(B + 1)]
-    p = 2 # start a first prime
+
+    #start at first prime
+    p = 2 
 
     factor_base = []
+
+    #look for primes up until B
     while p < (B + 1): 
         if prime_bool[p]:
-            if legendre_num(N,p) == 1: #factor base only includes primes with legrendre num equal to 1
+            #factor base only includes primes with legrendre num equal to 1
+            if legendre_num(N,p) == 1: 
                     factor_base.append(p) 
 
             #mark off all multiples of p as being composite
@@ -56,19 +98,46 @@ def find_factor_base(N, B):
                 prime_bool[j] = False
         p += 1
     return factor_base
-   
-#picks optimal bound B
+
 def set_B(N, epsilon=0.1): 
-    e = 2.71828183
+    """Picks optimal bound B
+
+    Args:
+        N (int): Number to factor
+        epsilon (float, optional): Some value close to 0. Defaults to 0.1
+
+    Returns:
+        int: Bound B for factor base
+    """
+    
+    e = 2.71828183 
+    #formula is optimal value for B
+    #epsilon varies based on size of N
     B = e ** ((0.5 + epsilon) * sqrt(ceil(log(N)*log(log(N)))))
     return ceil(B)
 
-#does (x + n)^2 - N where x = sqrt(N) to find B-smooth numbers.
 def find_smooth_numbers_brute_force(factor_base, N, interval, extra_rows=1):
+    """Finds B-smooth numbers by checking if the prime factors are in the factor base
+
+    Args:
+        factor_base (List[int]): Factor base
+        N (int): Number to factor
+        interval (int): Range of values to check for B-smooth numbers
+        extra_rows (int, optional): Number of extra B-Smooth numbers to find. Defaults to 1
+
+    Returns:
+        List[int]: A list of B-smooth numbers
+        List[int]: A list of x+n corresponding to each smooth number
+        Dict[int:List[int]]: A dictionary mapping a smooth number to its prime factors
+    """
+
     root = ceil(sqrt(N))
     x = [] 
     smooth_nums = []
     factors = {}
+
+
+    #calculate (x + n)^ - N for n=0,1,2,3... in the interval
     for i in range(interval):
         
         f_i = int((root + i) * (root + i) - N)
@@ -82,22 +151,35 @@ def find_smooth_numbers_brute_force(factor_base, N, interval, extra_rows=1):
         f_i_original = f_i
         prime_factors = []
         for p in factor_base: 
-            while f_i % p == 0:#p is a prime factor
-                f_i //= p #divide by prime in factor base
+            #p is a prime factor
+            while f_i % p == 0:
+                #divide by prime in factor base
+                f_i //= p 
                 prime_factors.append(p)
-
         
         if f_i == 1:
             smooth_nums.append(f_i_original)
             factors[f_i_original] = prime_factors
-            x.append(i+root) #x+n
+            x.append(i+root)
+            #print every 10 smooth numbers
             if (len(smooth_nums) % 10 == 0):
                 print('Smooth Number ' + str(len(smooth_nums))  + ':'+ str(f_i_original))
+        #we have found enough smoother numbers
         if len(smooth_nums) >= (len(factor_base) + extra_rows): 
               break
     return smooth_nums, x, factors
 
 def lower_register(orig, p):
+    """Repeatedly divides a number by p 
+
+    Args:
+        orig (int): Some number
+        p (int): Some prime
+
+    Returns:
+        int: The orginal number with factors of p divided
+    """
+    
     while (orig % p) == 0:
         orig //= p
     return orig
@@ -106,6 +188,19 @@ def lower_register_log(orig, log_p):
     return orig - log_p
 
 def check_smooth(f, x, N, factor_base, smooth_nums, x_list, factors):
+    """Checks if a number is smooth
+
+    Args:
+        f (_type_): Smooth number to check
+        x (int): Square root of N
+        N (_type_): Number to factor
+        factor_base (List[int]): Factor base
+        smooth_nums (List[int]): List of smooth numbers
+        x_list (List[int]):  A list of x+n corresponding to each smooth number
+        factors (Dict[int:List[int]]): A dictionary mapping a smooth number to its prime factors
+        threshold (int): Number of extra smooth numbers
+    """
+
     if f < 1:
         return
     if f == 1:
@@ -124,6 +219,19 @@ def check_smooth(f, x, N, factor_base, smooth_nums, x_list, factors):
         factors[x * x - N] = prime_factors
 
 def check_smooth_log(f, x, N, factor_base, smooth_nums, x_list, factors, threshold):
+    """Checks if a number is smooth, but log version
+
+    Args:
+        f (_type_): Smooth number to check
+        x (int): Square root of N
+        N (_type_): Number to factor
+        factor_base (List[int]): Factor base
+        smooth_nums (List[int]): List of smooth numbers
+        x_list (List[int]):  A list of x+n corresponding to each smooth number
+        factors (Dict[int:List[int]]): A dictionary mapping a smooth number to its prime factors
+        threshold (int): Number of extra smooth numbers
+    """
+
     if f <= 0:
         return
     elif f < threshold:
@@ -142,10 +250,22 @@ def check_smooth_log(f, x, N, factor_base, smooth_nums, x_list, factors, thresho
                 print(str(time.ctime()) + ": " + str(len(smooth_nums)) + " smooths have been found")
             x_list.append(x)
             smooth_nums.append(x * x - N)
-            factors[x * x - N] = prime_factors
-        
+            factors[x * x - N] = prime_factors    
 
-def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
+def find_smooth_numbers_TS(factor_base, N, extra_rows=1):
+    """Finds B-smooth numbers with Tonelli Shanks algorithim
+
+    Args:
+        factor_base (int): Factor Base
+        N (_type_): Number to factor
+        extra_rows (int, optional): Number of extra B-Smooth numbers to find. Defaults to 1
+
+    Returns:
+        List[int]: A list of B-smooth numbers
+        List[int]: A list of x+n corresponding to each smooth number
+        Dict[int:List[int]]: A dictionary mapping a smooth number to its prime factors
+    """
+
     root = ceil(sqrt(N))
     x_list = [] 
     smooth_nums = []
@@ -157,21 +277,15 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
 
     solutions_mod_p = [tonelli_shanks(i, N) for i in factor_base]
 
-    x_upper_lim = int((sqrt(2) - 1)*sqrt(N) - 1)
-   
-
-    #length = min(max(factor_base) + 1, x_upper_lim)
     length = 250000
-    log_p = [log(p) for p in factor_base]
-    threshold = log(max(factor_base) + 1)
-    
+
     end=-1
     while len(smooth_nums) < num_needed:
         start=end+1
         end = start+length
 
         f_x = [(root + start + i) * (root + start + i) - N for i in range(length)]
-        #f_x = [log((root + start + i) * (root + start + i) - N) for i in range(length)]
+       
         for i in range(len(factor_base)):
             p_i = factor_base[i]
             (x1, x2) = solutions_mod_p[i]
@@ -184,34 +298,39 @@ def find_smooth_numbers_TS(factor_base, N, interval, extra_rows=1):
                 first_val_1 -= p_i
             if first_val_2 >= p_i:
                 first_val_2 -= p_i
-
-
             
             for x_val in range(first_val_1, length, p_i):
                 #divide out p
                 f_x[x_val] = lower_register(f_x[x_val], p_i)
-                #f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
+                
                 #check that x_val+start is correct argument
                 check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
-                #check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
+             
 
             for x_val in range(first_val_2, length, p_i):
                 #divide out p
                 f_x[x_val] = lower_register(f_x[x_val], p_i)
-                #f_x[x_val] = lower_register_log(f_x[x_val], log_p[i])
                 check_smooth(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors)
-                #check_smooth_log(f_x[x_val], x_val+start+root, N, factor_base, smooth_nums, x_list, factors, threshold)
-
 
     return smooth_nums, x_list, factors
 
-
-
-
-#builds matrix of exponents of prime factors of smooth numbers mod 2
 def make_matrix(factor_base, smooth_nums, factors):
-    matrix = [] #binary version
-    matrix_nb = [] #non-binary version
+    """Builds matrix of exponents of prime factors of smooth numbers
+
+    Args:
+        factor_base (List[int]): Factor base
+        smooth_nums (List[int]): List of smooth numbers
+        factors (Dict[int:List[int]]): A dictionary mapping a smooth number to its prime factors
+
+    Returns:
+        List[List[int]]: A 2d matrix mod 2
+        List[List[int]]: A 2d matrix 
+    """
+    
+    #binary version
+    matrix = [] 
+    #non-binary version
+    matrix_nb = [] 
 
     for n in smooth_nums:
         exp_vector = [0 for i in range(len(factor_base))]
@@ -220,14 +339,23 @@ def make_matrix(factor_base, smooth_nums, factors):
 
         for i in range(len(factor_base)):
             if factor_base[i] in prime_factors:
-                exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 #get exponenet vector of prime factors mod 2
+                #get exponenet vector of prime factors mod 2
+                exp_vector[i] = (exp_vector[i] + prime_factors.count(factor_base[i])) % 2 
                 exp_vector2[i] = prime_factors.count(factor_base[i])
         matrix.append(exp_vector)
         matrix_nb.append(exp_vector2)
     return matrix, matrix_nb
 
-#tranposes a matrix
 def matrix_transpose(matrix):
+    """Tranposes a matrix
+
+    Args:
+        matrix (List[List[int]]): Some matrix
+
+    Returns:
+        List[List[int]]: The tranposed versioned of the matrix
+    """
+
     original_num_rows = len(matrix)
     original_num_cols = len(matrix[0])
     new_matrix = [[0 for i in range(original_num_rows)] for j in range(original_num_cols)]
@@ -236,8 +364,16 @@ def matrix_transpose(matrix):
             new_matrix[i][j] = matrix[j][i]
     return new_matrix
 
-#doess row reductions to find the left null space
 def find_left_null_vectors(matrix):
+    """Finds the left null space vector of a matrix
+
+    Args:
+        matrix (List[List[int]]): Some matrix
+
+    Returns:
+        List[int]: A vector representing the left null space
+    """
+
     num_rows = len(matrix)
     num_cols = len(matrix[0])
     combos = [[0 for i in range(num_rows)] for j in range(num_rows)]
@@ -281,8 +417,20 @@ def find_left_null_vectors(matrix):
     
     return [combos[rows[i]] for i in range(num_cols, num_rows)]      
 
-#caulates a^2 = b^2 mod n and does gcd(a+b, n)
 def find_squared_congruence(null_vector, x, factor_base, matrix_nb, N):
+    """Caulates a and b for a^2 = b^2 mod n from left null space
+
+    Args:
+        null_vector (List[int]): Vector representing left null space
+        x (List[int]): A list of x+n corresponding to each smooth number 
+        factor_base (List[int]): Factor Base
+        matrix_nb (List[List[int]]): Matrix representing prime factors for each smooth number
+        N (int): Number to factor
+
+    Returns:
+        (int, int): a and b
+    """
+
     combo_rows = []
     for i in range(len(null_vector)):
         if null_vector[i] == 1:
@@ -291,11 +439,13 @@ def find_squared_congruence(null_vector, x, factor_base, matrix_nb, N):
     
     a = 1
     b = 1
-    smooth_vector = [0 for i in factor_base] #this is an exponent vector
+    #this is an exponent vector
+    smooth_vector = [0 for i in factor_base] 
 
     for i in combo_rows:
         for j in range(len(factor_base)):
-            smooth_vector[j] += matrix_nb[i][j] #gets the exponent power for each prime
+            #gets the exponent power for each prime
+            smooth_vector[j] += matrix_nb[i][j] 
   
     for i in range(len(smooth_vector)):
         f = 1
@@ -305,12 +455,22 @@ def find_squared_congruence(null_vector, x, factor_base, matrix_nb, N):
 
     for n in x_nums:
         b *= n
+    
     if ((a * a) % N ) != ((b * b) % N):
-        print("wtf, problem!")
+        print("Error, problem!")
     return (a, b)   
 
-# run Miller rabin several times with different values of a
 def check_prime(n, iter=10):
+    """Runs Miller Rabin to check if a number is prime
+
+    Args:
+        n (int): Number to check if prime
+        iter (int, optional): Number of iterations. Defaults to 10
+
+    Returns:
+        bool: True if prime and False otherwise
+    """
+
     if (exp_mod(2, n-1, n) != 1):
         return False
     m = 1
@@ -338,12 +498,19 @@ def check_prime(n, iter=10):
             j += 1
     return True
 
-
-#returns two solutions to x^2 congruent to n mod p
 def tonelli_shanks(p, n):
+    """Tonellis Shanks algorithim to find solutions for x^2 = n mod p
+
+    Args:
+        p (int): Some prime
+        n (int): Some number
+
+    Returns:
+        (int, int): 2 solutions x and p - x
+    """
+
     if legendre_num(n, p) != 1:
         print("not a square (mod p)")
-
 
     #now going to find s and e s.t. s * 2^e = p-1
     s = p - 1
@@ -362,7 +529,6 @@ def tonelli_shanks(p, n):
         if legendre_num(q_test, p) == p-1:
             q = q_test
             break
-    
 
     #initializing some variables
     x = exp_mod(n, (s+1)//2, p)
@@ -389,13 +555,18 @@ def tonelli_shanks(p, n):
         b = (b * g) % p
         r = i
     return (x, (p - x) % p)
-        
 
+def factor(N, epsilon):
+    """Full quadratic sieve algorithim that factors a number
 
-    
+    Args:
+        N (int): Number to factor
+        epsilon (float): Epsilon to pick bound B
 
+    Returns:
+        List[int]: The times to factor N in milliseconds
+    """
 
-def factor(N=21, epsilon=0.001):
     start_time_ms = int(time.time() * 1000)
 
     if check_prime(N):
@@ -411,6 +582,8 @@ def factor(N=21, epsilon=0.001):
     time_0 = int(time.time() * 1000)
     print('Finding smooth numbers ...')
     extra_rows = int(20 + log(N))
+
+    #use brute force if N is small otherwise use Tonelli Shanks method
     if (N < ( 10 ** 15 )):
         smooth_nums, x, factors = find_smooth_numbers_brute_force(factor_base, N, B**3, extra_rows)
     else:
@@ -425,7 +598,7 @@ def factor(N=21, epsilon=0.001):
     else:
         print('Found smooth numbers in ' + str(found_smooth_time_ms / 1000) + "s")
 
-    #below, matrix is all mod 2 entries, while matrix_nb has any positive integer for each entry
+    #below, matrix is all mod 2 entries, while matrix_nb has any positive int for each entry
     matrix, matrix_nb = make_matrix(factor_base, smooth_nums, factors) 
 
     time_1 = int(time.time() * 1000)
@@ -434,12 +607,12 @@ def factor(N=21, epsilon=0.001):
     null_combos = find_left_null_vectors(matrix)
     elim_time = int(int(time.time() * 1000) - time_1)
     print("elim time: " + str(elim_time / 1000) + "s")
+
     num_solutions = len(null_combos)
 
     for s in range(num_solutions):
         [a, b] = find_squared_congruence(null_combos[s], x, factor_base, matrix_nb, N)
         possible_factor = abs(gcd(a-b, N))
-
         if possible_factor == 1 or possible_factor == N:
             print("Trivial Factor")
             continue
@@ -456,24 +629,9 @@ def factor(N=21, epsilon=0.001):
     return factor(N, epsilon * 10)
 
 def main():
-    #N= 21
-    #N = 4201 * 8011
-    #N = 55587
-    #N = 1009 * 191161
-    #N = 37 * 1009
-    #N = 484459 * 191161
-    #N = 4201 * 484459
-    #N = 1000033 * 1000003
-    #N = 10000019 * 10000169
-    #N = 100000007 * 10000169
-    #N = 100000007 * 100000049
-    #N = 16921456439215439701
-    #N = 46839566299936919234246726809
-    #N = 1000000000100011 * 1084051191974761
-    #N = 6172835808641975203638304919691358469663
-    N = 3744843080529615909019181510330554205500926021947
-    
+    N = 3744843080529615909019181510330554205500926021947 
     return factor(N, epsilon=0.005)
+
 if __name__ == "__main__":
     print(main())
 
